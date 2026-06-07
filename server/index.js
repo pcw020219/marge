@@ -14,6 +14,10 @@ app.use('/api/quotes', require('./routes/quotes'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/collections', require('./routes/collections'));
 
-app.listen(PORT, () => {
-  console.log(`Marge 서버 실행 중 → http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Marge 서버 실행 중 → http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

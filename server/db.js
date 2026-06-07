@@ -1,7 +1,10 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, 'marge.db'));
+const dbPath = process.env.VERCEL
+  ? '/tmp/marge.db'
+  : path.join(__dirname, 'marge.db');
+const db = new Database(dbPath);
 
 db.pragma('foreign_keys = ON');
 db.pragma('journal_mode = WAL');
