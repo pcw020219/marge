@@ -71,7 +71,7 @@ export default function Login() {
           {error && (
             <p style={{ color: 'var(--danger, #e05252)', fontSize: '0.85rem', margin: 0 }}>{error}</p>
           )}
-          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%' }}>
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
             {loading
               ? <><span className="spinner spinner--sm" style={{ borderTopColor: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} /> 전송 중</>
               : '로그인 링크 받기'}

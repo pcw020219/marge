@@ -5,8 +5,6 @@ const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
 const { pool } = require('../db');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 // POST /api/auth/send — 매직 링크 이메일 발송
 router.post('/send', async (req, res, next) => {
   try {
@@ -33,6 +31,7 @@ router.post('/send', async (req, res, next) => {
 
     const magicLink = `${process.env.APP_URL}/verify?token=${token}`;
 
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
       from: process.env.RESEND_FROM || 'Marge <onboarding@resend.dev>',
       to: email,
