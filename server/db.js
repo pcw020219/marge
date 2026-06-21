@@ -1,68 +1,70 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 
-const dbPath = process.env.VERCEL
-  ? '/tmp/marge.db'
-  : path.join(__dirname, 'marge.db');
-const db = new Database(dbPath);
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-db.pragma('foreign_keys = ON');
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
-db.pragma('cache_size = -8000'); // 8 MB page cache
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS books (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    author TEXT,
-    publisher TEXT,
-    genre TEXT,
-    status TEXT NOT NULL DEFAULT '읽고 싶음',
-    rating REAL,
-    review TEXT,
-    start_date TEXT,
-    end_date TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-  );
+    CREATE TABLE IF NOT EXISTS magic_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used BOOLEAN DEFAULT FALSE
+    );
 
-  CREATE TABLE IF NOT EXISTS quotes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    book_id INTEGER NOT NULL,
-    text TEXT NOT NULL,
-    page INTEGER,
-    memo TEXT,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS books (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      author TEXT,
+      publisher TEXT,
+      genre TEXT,
+      status TEXT NOT NULL DEFAULT '읽고 싶음',
+      rating REAL,
+      review TEXT,
+      start_date TEXT,
+      end_date TEXT,
+      is_favorite INTEGER NOT NULL DEFAULT 0,
+      reread_count INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
 
-  CREATE TABLE IF NOT EXISTS collections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
-    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-  );
+    CREATE TABLE IF NOT EXISTS quotes (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      text TEXT NOT NULL,
+      page INTEGER,
+      memo TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
 
-  CREATE TABLE IF NOT EXISTS book_collections (
-    book_id INTEGER NOT NULL,
-    collection_id INTEGER NOT NULL,
-    PRIMARY KEY (book_id, collection_id),
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
-    FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
-  );
+    CREATE TABLE IF NOT EXISTS collections (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, name)
+    );
 
-  CREATE INDEX IF NOT EXISTS idx_books_status_created ON books(status, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_books_created ON books(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_books_status_end   ON books(status, end_date);
-  CREATE INDEX IF NOT EXISTS idx_books_status_genre ON books(status, genre);
-  CREATE INDEX IF NOT EXISTS idx_quotes_book_id_created ON quotes(book_id, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_quotes_created ON quotes(created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_book_collections_book ON book_collections(book_id);
-  CREATE INDEX IF NOT EXISTS idx_book_collections_col  ON book_collections(collection_id);
-`);
+    CREATE TABLE IF NOT EXISTS book_collections (
+      book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+      collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+      PRIMARY KEY (book_id, collection_id)
+    );
 
-// Migrations for existing databases
-try { db.exec('ALTER TABLE books ADD COLUMN genre TEXT'); } catch (_) {}
-try { db.exec('ALTER TABLE books ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
-try { db.exec('ALTER TABLE books ADD COLUMN reread_count INTEGER NOT NULL DEFAULT 1'); } catch (_) {}
+    CREATE INDEX IF NOT EXISTS idx_books_user_status  ON books(user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_books_user_created ON books(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_quotes_user_created ON quotes(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_quotes_book_id     ON quotes(book_id);
+    CREATE INDEX IF NOT EXISTS idx_magic_tokens_token ON magic_tokens(token);
+  `);
+}
 
-module.exports = db;
+module.exports = { pool, initDb };

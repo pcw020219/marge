@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../db');
 
 const WITH_BOOK = `
   SELECT q.*, b.title AS book_title, b.author AS book_author
@@ -8,50 +8,94 @@ const WITH_BOOK = `
   LEFT JOIN books b ON q.book_id = b.id
 `;
 
-// Prepared statements compiled once at startup
-const stmts = {
-  list:        db.prepare(`${WITH_BOOK} ORDER BY q.created_at DESC`),
-  listByBook:  db.prepare(`${WITH_BOOK} WHERE q.book_id = ? ORDER BY q.created_at DESC`),
-  get:         db.prepare(`${WITH_BOOK} WHERE q.id = ?`),
-  insert:      db.prepare('INSERT INTO quotes (book_id, text, page, memo) VALUES (?, ?, ?, ?)'),
-  update:      db.prepare('UPDATE quotes SET text = ?, page = ?, memo = ? WHERE id = ?'),
-  del:         db.prepare('DELETE FROM quotes WHERE id = ?'),
-};
-
-router.get('/', (req, res) => {
-  const { book_id } = req.query;
-  res.json(book_id ? stmts.listByBook.all(book_id) : stmts.list.all());
-});
-
-router.post('/', (req, res) => {
-  const { book_id, text, page, memo } = req.body;
-  if (!book_id || !text?.trim()) {
-    return res.status(400).json({ error: '책과 문장은 필수입니다' });
+router.get('/', async (req, res, next) => {
+  try {
+    const { book_id } = req.query;
+    let result;
+    if (book_id) {
+      result = await pool.query(
+        `${WITH_BOOK} WHERE q.book_id=$1 AND q.user_id=$2 ORDER BY q.created_at DESC`,
+        [book_id, req.userId]
+      );
+    } else {
+      result = await pool.query(
+        `${WITH_BOOK} WHERE q.user_id=$1 ORDER BY q.created_at DESC`,
+        [req.userId]
+      );
+    }
+    res.json(result.rows);
+  } catch (err) {
+    next(err);
   }
-
-  const result = stmts.insert.run(book_id, text.trim(), page ?? null, memo || null);
-  res.status(201).json(stmts.get.get(result.lastInsertRowid));
 });
 
-router.put('/:id', (req, res) => {
-  const quote = stmts.get.get(req.params.id);
-  if (!quote) return res.status(404).json({ error: '문장을 찾을 수 없습니다' });
+router.post('/', async (req, res, next) => {
+  try {
+    const { book_id, text, page, memo } = req.body;
+    if (!book_id || !text?.trim()) {
+      return res.status(400).json({ error: '책과 문장은 필수입니다' });
+    }
 
-  const { text, page, memo } = req.body;
-  stmts.update.run(
-    text ?? quote.text,
-    page !== undefined ? (page ?? null) : quote.page,
-    memo !== undefined ? (memo || null) : quote.memo,
-    req.params.id,
-  );
+    const bookCheck = await pool.query(
+      'SELECT id FROM books WHERE id=$1 AND user_id=$2',
+      [book_id, req.userId]
+    );
+    if (!bookCheck.rows[0]) return res.status(403).json({ error: '권한이 없습니다' });
 
-  res.json({ ...quote, text: text ?? quote.text, page: page !== undefined ? (page ?? null) : quote.page, memo: memo !== undefined ? (memo || null) : quote.memo });
+    const ins = await pool.query(
+      'INSERT INTO quotes (user_id, book_id, text, page, memo) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+      [req.userId, book_id, text.trim(), page ?? null, memo || null]
+    );
+
+    const result = await pool.query(
+      `${WITH_BOOK} WHERE q.id=$1`,
+      [ins.rows[0].id]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.delete('/:id', (req, res) => {
-  const result = stmts.del.run(req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: '문장을 찾을 수 없습니다' });
-  res.json({ success: true });
+router.put('/:id', async (req, res, next) => {
+  try {
+    const quoteRes = await pool.query(
+      `${WITH_BOOK} WHERE q.id=$1 AND q.user_id=$2`,
+      [req.params.id, req.userId]
+    );
+    const quote = quoteRes.rows[0];
+    if (!quote) return res.status(404).json({ error: '문장을 찾을 수 없습니다' });
+
+    const { text, page, memo } = req.body;
+    const upd = await pool.query(
+      'UPDATE quotes SET text=$1, page=$2, memo=$3 WHERE id=$4 AND user_id=$5 RETURNING id',
+      [
+        text ?? quote.text,
+        page !== undefined ? (page ?? null) : quote.page,
+        memo !== undefined ? (memo || null) : quote.memo,
+        req.params.id,
+        req.userId,
+      ]
+    );
+
+    const result = await pool.query(`${WITH_BOOK} WHERE q.id=$1`, [upd.rows[0].id]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM quotes WHERE id=$1 AND user_id=$2',
+      [req.params.id, req.userId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: '문장을 찾을 수 없습니다' });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;
