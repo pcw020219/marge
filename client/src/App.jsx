@@ -6,7 +6,6 @@ import { useAuth } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
-import VerifyToken from './pages/VerifyToken';
 import BookList from './pages/BookList';
 import BookDetail from './pages/BookDetail';
 import QuoteCollection from './pages/QuoteCollection';
@@ -68,8 +67,7 @@ export default function App() {
       />
       <main className="main-content">
         <Routes>
-          <Route path="/login"  element={<Login />} />
-          <Route path="/verify" element={<VerifyToken />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/"         element={<ProtectedRoute><BookList /></ProtectedRoute>} />
           <Route path="/books/:id" element={<ProtectedRoute><BookDetail /></ProtectedRoute>} />
           <Route path="/quotes"   element={<ProtectedRoute><QuoteCollection /></ProtectedRoute>} />

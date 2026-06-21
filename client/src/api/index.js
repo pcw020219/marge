@@ -24,8 +24,8 @@ async function req(url, opts = {}) {
 
 export const api = {
   // Auth
-  sendMagicLink:  (email) => req('/auth/send', { method: 'POST', body: JSON.stringify({ email }) }),
-  verifyMagicLink: (token) => req(`/auth/verify?token=${encodeURIComponent(token)}`),
+  sendCode:   (email)       => req('/auth/send',   { method: 'POST', body: JSON.stringify({ email }) }),
+  verifyCode: (email, code) => req('/auth/verify', { method: 'POST', body: JSON.stringify({ email, code }) }),
 
   // Books
   getBooks: (params = {}) => {
