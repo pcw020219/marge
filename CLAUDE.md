@@ -25,7 +25,7 @@ marge/
 │       │   ├── 0001-postgresql-over-sqlite.md
 │       │   ├── 0002-email-otp-auth.md
 │       │   └── 0003-vercel-railway-split.md
-│       └── findings.md                ← 미해결 문제 (F-1~F-5)
+│       └── findings.md                ← 미해결 문제 (F-2)
 ├── server/
 │   └── AGENTS.md                      ← 서버 범위, 불변 규칙, 패턴
 └── client/
@@ -42,7 +42,7 @@ marge/
 
 3. **인생책 제약**: `is_favorite = 1`은 `status = '완독'`인 책에만 가능. 완독이 아닌 상태로 전환 시 자동 해제.
 
-4. **컬렉션 제약**: 완독(`status = '완독'`)한 책만 컬렉션에 추가 가능. **현재 API에 미구현 상태** — `server/routes/collections.js`의 `POST /:id/books`에 상태 체크가 없어 모든 상태의 책 추가 가능.
+4. **컬렉션 제약**: 완독(`status = '완독'`)한 책만 컬렉션에 추가 가능. 서버에서 비완독 책 추가 시 400 반환, 클라이언트 `BookCard`는 완독 책에만 "컬렉션에 추가" 버튼 표시.
 
 5. **오류 응답 형식**: 항상 `{ error: "한국어 메시지" }` 형태. 형식 불일치 시 클라이언트 파싱 오류.
 
@@ -56,7 +56,7 @@ marge/
 
 **DB 스키마 관련 작업 전**: `docs/engineering-notes.md`의 PostgreSQL 전환 이후 주의사항 확인. `server/db.js`의 `CREATE TABLE IF NOT EXISTS` 패턴 사용 중 — 컬럼 추가/변경은 별도 ALTER 쿼리 필요.
 
-**컬렉션 로직 전**: `docs/business-rules.md`의 컬렉션 규칙 확인 (완독 제약 미구현 현황 포함).
+**컬렉션 로직 전**: `docs/business-rules.md`의 컬렉션 규칙 확인.
 
 **API 추가/변경 전**: `docs/contracts.md` 확인 후 변경된 계약을 함께 업데이트.
 

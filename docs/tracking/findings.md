@@ -1,6 +1,6 @@
 # 미해결 문제
 
-## F-2: server/.env가 git에 추적됨
+## F-2: server/.env가 git에 추적됨 (미해결)
 
 - **증상**: `git ls-files server/.env`가 파일을 반환함. `server/.gitignore`에 `.env`가 있지만 이미 커밋된 파일은 추적 해제되지 않음.
 - **영향**: git 히스토리에 `DATABASE_URL`(Railway PostgreSQL 접속 정보), `JWT_SECRET`, `RESEND_API_KEY`가 포함되어 있음.
