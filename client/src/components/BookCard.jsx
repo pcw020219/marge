@@ -70,12 +70,14 @@ export default function BookCard({ book }) {
           >
             수정
           </button>
-          <button
-            className="card-menu-item"
-            onClick={() => { setMenuOpen(false); setShowAddToCollection(true); }}
-          >
-            컬렉션에 추가
-          </button>
+          {book.status === '완독' && (
+            <button
+              className="card-menu-item"
+              onClick={() => { setMenuOpen(false); setShowAddToCollection(true); }}
+            >
+              컬렉션에 추가
+            </button>
+          )}
           <button className="card-menu-item card-menu-item--danger" onClick={handleDelete}>
             삭제
           </button>
@@ -86,7 +88,7 @@ export default function BookCard({ book }) {
         <BookEditModal book={book} onClose={() => setShowEdit(false)} />
       )}
 
-      {showAddToCollection && (
+      {book.status === '완독' && showAddToCollection && (
         <AddToCollectionModal book={book} onClose={() => setShowAddToCollection(false)} />
       )}
     </div>

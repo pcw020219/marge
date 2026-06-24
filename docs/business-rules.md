@@ -47,8 +47,10 @@
 
 ## 컬렉션
 
-- 완독한 책(`status = '완독'`)만 컬렉션에 추가할 수 있어야 함.
-  - **현재 API에 이 제약이 구현되지 않음** — 모든 상태의 책 추가 가능한 상태. `server/routes/collections.js`의 `POST /:id/books`에 `book.status === '완독'` 체크가 빠져 있다.
+- 완독한 책(`status = '완독'`)만 컬렉션에 추가 가능.
+  - 서버(`POST /api/collections/:id/books`): `book.status !== '완독'`이면 400 반환.
+  - 클라이언트(`BookCard`): 완독 책에만 "컬렉션에 추가" 드롭다운 항목 표시.
+  - `AddToCollectionModal`: 서버 400 수신 시 오류 메시지 표시.
 - 동일 사용자 내 컬렉션 이름 중복 불가 (409 반환).
 - 같은 책을 같은 컬렉션에 중복 추가해도 오류 없이 무시됨 (`ON CONFLICT DO NOTHING`).
 - 컬렉션 삭제 시 해당 컬렉션의 책-컬렉션 연결도 함께 삭제됨 (CASCADE).

@@ -42,8 +42,19 @@
 
 JWT는 localStorage에 저장되어 XSS에 취약함. 현재 허용 중인 트레이드오프.
 
-## 보안 미구현 사항 (개선 예정)
+## Rate Limiting
 
-- **CORS 제한 없음**: `app.use(cors())`로 모든 오리진 허용. 어떤 도메인의 스크립트에서도 API 호출 가능. 배포 도메인만 허용하도록 `cors({ origin: [...] })` 설정 추가 예정.
-- **인증 코드 발송 횟수 제한 없음**: `/api/auth/send`에 속도 제한 없어 임의 이메일로 무제한 코드 발송 가능. IP 기반 rate limiting 추가 예정.
-- **server/.env git 추적**: `server/.gitignore`에 `.env`가 있으나 이미 커밋된 파일이라 추적 해제되지 않음. `git rm --cached server/.env` 후 자격증명 교체 필요.
+`express-rate-limit` 패키지로 인증 엔드포인트에 IP 기반 속도 제한이 적용되어 있다.
+
+| 엔드포인트 | 제한 | 초과 시 |
+|---|---|---|
+| `POST /api/auth/send` | IP당 분당 5회 | 429 `{ "error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }` |
+| `POST /api/auth/verify` | IP당 분당 10회 | 429 `{ "error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." }` |
+
+## CORS
+
+`ALLOWED_ORIGINS` 환경변수(콤마 구분)로 허용 오리진을 관리한다. 미설정 시 모든 오리진 거부(`origin: false`). Railway 배포 환경변수에 Vercel URL을 등록해야 한다. 개발 환경은 Vite proxy(`localhost:3000 → localhost:3002`)를 경유하므로 CORS가 개입하지 않는다.
+
+## 미해결 보안 사항
+
+- **server/.env git 추적** (F-2): `server/.gitignore`에 `.env`가 있으나 이미 커밋된 파일이라 추적 해제되지 않음. `git rm --cached server/.env` 후 자격증명 교체 필요.

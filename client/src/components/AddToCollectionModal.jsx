@@ -5,6 +5,7 @@ import { api } from '../api';
 export default function AddToCollectionModal({ book, onClose }) {
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState('');
+  const [error, setError] = useState('');
 
   const { data: allCollections = [] } = useQuery({
     queryKey: ['collections'],
@@ -21,11 +22,17 @@ export default function AddToCollectionModal({ book, onClose }) {
   const toggle = async (col) => {
     if (bookColIds.has(col.id)) {
       await api.removeBookFromCollection(col.id, book.id);
+      queryClient.invalidateQueries({ queryKey: ['book-collections', book.id] });
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
     } else {
-      await api.addBookToCollection(col.id, book.id);
+      const res = await api.addBookToCollection(col.id, book.id);
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['book-collections', book.id] });
+      queryClient.invalidateQueries({ queryKey: ['collections'] });
     }
-    queryClient.invalidateQueries({ queryKey: ['book-collections', book.id] });
-    queryClient.invalidateQueries({ queryKey: ['collections'] });
   };
 
   const handleCreate = async () => {
@@ -33,7 +40,12 @@ export default function AddToCollectionModal({ book, onClose }) {
     if (!name) return;
     const res = await api.createCollection(name);
     if (res.error) return;
-    await api.addBookToCollection(res.id, book.id);
+    const addRes = await api.addBookToCollection(res.id, book.id);
+    if (addRes?.error) {
+      setError(addRes.error);
+      return;
+    }
+    setError('');
     setNewName('');
     queryClient.invalidateQueries({ queryKey: ['collections'] });
     queryClient.invalidateQueries({ queryKey: ['book-collections', book.id] });
@@ -45,6 +57,7 @@ export default function AddToCollectionModal({ book, onClose }) {
         <button className="modal-close-btn" onClick={onClose}>✕</button>
         <h2 className="modal-title">컬렉션에 추가</h2>
         <p className="modal-book-name">「{book.title}」</p>
+        {error && <p className="modal-error">{error}</p>}
 
         {allCollections.length === 0 ? (
           <p className="collection-empty">컬렉션이 없습니다. 아래에서 새로 만드세요.</p>
