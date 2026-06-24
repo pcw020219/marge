@@ -3,9 +3,26 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { Resend } = require('resend');
 const { pool } = require('../db');
+const rateLimit = require('express-rate-limit');
+
+const sendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
+
+const verifyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+});
 
 // POST /api/auth/send — 6자리 인증 코드 이메일 발송
-router.post('/send', async (req, res, next) => {
+router.post('/send', sendLimiter, async (req, res, next) => {
   try {
     const email = req.body?.email?.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -62,7 +79,7 @@ router.post('/send', async (req, res, next) => {
 });
 
 // POST /api/auth/verify — 코드 검증 후 JWT 발급
-router.post('/verify', async (req, res, next) => {
+router.post('/verify', verifyLimiter, async (req, res, next) => {
   try {
     const email = req.body?.email?.trim().toLowerCase();
     const code  = req.body?.code?.trim();
