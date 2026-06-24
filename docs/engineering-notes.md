@@ -25,9 +25,9 @@ verify 시 코드 비교: `token = ${userId}:${code}` 형태로 조회 — `user
 
 `BookList.jsx`는 서버에서 전체 목록을 받아온 후 클라이언트에서 21개씩 페이지 처리한다. 책이 수백 권 이상으로 늘어나면 초기 응답 크기가 커진다. 서버 사이드 페이지네이션이 필요한 규모가 되면 API에 `limit`/`offset` 파라미터 추가가 필요하다.
 
-## `scripts/import.js` 동작 불가
+## Rate Limit — Railway 프록시 환경 주의
 
-`server/scripts/import.js`가 `better-sqlite3`의 동기 API(`.prepare()`, `.transaction()`)를 사용해 작성되어 있다. 현재 DB는 PostgreSQL이므로 실행 즉시 오류가 발생한다. 삭제 예정.
+`express-rate-limit`의 기본 `keyGenerator`는 `req.ip`를 사용한다. Railway는 리버스 프록시를 경유하므로, `trust proxy` 설정 없이는 실제 클라이언트 IP 대신 프록시 IP가 `req.ip`로 잡혀 모든 요청이 같은 IP로 집계될 수 있다. 적용 시: `app.set('trust proxy', 1)` 추가 필요 (Railway는 1홉 프록시). 미설정 상태에서는 Rate Limit이 사실상 전체 트래픽에 통합 적용됨.
 
 ## `client/snap4.cjs`
 
