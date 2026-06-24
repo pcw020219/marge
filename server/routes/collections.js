@@ -75,10 +75,13 @@ router.post('/:id/books', async (req, res, next) => {
 
     const [colCheck, bookCheck] = await Promise.all([
       pool.query('SELECT id FROM collections WHERE id=$1 AND user_id=$2', [req.params.id, req.userId]),
-      pool.query('SELECT id FROM books WHERE id=$1 AND user_id=$2', [book_id, req.userId]),
+      pool.query('SELECT id, status FROM books WHERE id=$1 AND user_id=$2', [book_id, req.userId]),
     ]);
     if (!colCheck.rows[0] || !bookCheck.rows[0]) {
       return res.status(403).json({ error: '권한이 없습니다' });
+    }
+    if (bookCheck.rows[0].status !== '완독') {
+      return res.status(400).json({ error: '완독한 책만 컬렉션에 추가할 수 있습니다' });
     }
 
     await pool.query(
