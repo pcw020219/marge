@@ -10,7 +10,11 @@ const app = express();
 const PORT = process.env.PORT || 3002;
 
 app.use(compression());
-app.use(cors());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(o => o.length > 0);
+app.use(cors({ origin: allowedOrigins.length > 0 ? allowedOrigins : false }));
 app.use(express.json());
 
 app.use('/api/auth',        require('./routes/auth'));
