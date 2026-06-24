@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "PowerShell(\\(Get-Content \"D:\\\\marge\\\\server\\\\package.json\" | ConvertFrom-Json\\).scripts; \\(Get-Content \"D:\\\\marge\\\\client\\\\package.json\" | ConvertFrom-Json\\).scripts)"
     ]
   }
 }
